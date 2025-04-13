@@ -5,7 +5,7 @@ a = Analysis(
     ['3d_budget_calc_GUI.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

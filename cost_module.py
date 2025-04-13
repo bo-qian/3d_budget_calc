@@ -2,66 +2,24 @@ import re
 import pandas as pd
 from datetime import datetime
 
-def calculate_multipart_cost(parts, total_print_duration):
-    # 定价标准重构
-    pricing_standard = {
-        "钛合金密度": 4.50,        # 单位：g/cm³
-        "致密度系数": 0.9995,      # 无量纲
-        "用量比例": 1.5,           # 无量纲 
-        "材料单价": 900,           # 元/公斤
-        "机时费率": 250,           # 元/小时
-        "氩气数量": 1,             # 无量纲
-        "氩气单价": 1800,          # 元
-        "氩气用量": 0.8,           # 无量纲
-        "后处理费用": 1500,        # 元
-        "折扣率": 0.8              # 百分比
-    }
-
-    # 单位映射表[7](@ref)
-    unit_mapping = {
-        "钛合金密度": "g/cm³",
-        "致密度系数": "",
-        "用量比例": "",
-        "材料单价": "元/公斤", 
-        "机时费率": "元/小时",
-        "氩气数量": "",
-        "氩气单价": "元",
-        "氩气用量": "",
-        "后处理费用": "元",
-        "折扣率": "%"
-    }
-
-    # 格式化定价标准
-    formatted_pricing = {}
-    for param, value in pricing_standard.items():
-        if param == "折扣率":
-            formatted_value = f"{value*10}"
-        elif isinstance(value, float):
-            formatted_value = f"{value:.4f}{unit_mapping[param]}"
-        else:
-            formatted_value = f"{value}{unit_mapping[param]}"
-            
-        formatted_pricing[param] = formatted_value
-    
+def calculate_multipart_cost(parts, total_print_duration, pricing_standard):
     # 总材料计算
     total_volume = sum(p['volume'] for p in parts)
-    # 体积单位转换
-    material_weight_g = (total_volume * 1e-3 * pricing_standard["钛合金密度"]  # cm³→kg
-                        * pricing_standard["用量比例"] * pricing_standard["致密度系数"])
-    # 材料费用计算
+    material_weight_g = (total_volume * 1e-3 * pricing_standard["钛粉密度"]
+                         * pricing_standard["用量比例"] * pricing_standard["致密系数"])
     material_cost = material_weight_g * pricing_standard["材料单价"] * 1e-3
 
-    # 机时费用（关键修改点）
+    # 机时费用
     machine_hours = convert_duration_to_hours(total_print_duration)
     machine_cost = machine_hours * pricing_standard["机时费率"]
 
     # 其他费用
     argon_cost = pricing_standard["氩气单价"] * pricing_standard["氩气用量"] * pricing_standard["氩气数量"]
-    post_processing = pricing_standard["后处理费用"]
-    
+    post_processing = pricing_standard["后处理费"]
+
     # 费用汇总
     total_cost = material_cost + machine_cost + argon_cost + post_processing
-    actual_cost = total_cost * pricing_standard["折扣率"]
+    actual_cost = total_cost * pricing_standard["折扣优惠"]
 
     return {
         "输入参数": {
@@ -69,12 +27,12 @@ def calculate_multipart_cost(parts, total_print_duration):
             "总打印时长": total_print_duration,
             "零件数量": len(parts)
         },
-        "定价标准": formatted_pricing,
+        "定价标准": pricing_standard,
         "计算明细": {
             "材料费用": round(material_cost, 2),
             "机时费用": round(machine_cost, 2),
             "氩气费用": round(argon_cost, 2),
-            "后处理费用": round(post_processing, 2),
+            "后处理费": round(post_processing, 2),
             "总费用": round(total_cost, 2),
             "实际费用": round(actual_cost, 2)
         }
@@ -134,10 +92,10 @@ def format_terminal_output(result):
         f"材料成本：{result['计算明细']['材料费用']:>15,.2f}¥".rjust(55),
         f"机时费用：{result['计算明细']['机时费用']:>15,.2f}¥".rjust(55),
         f"氩气消耗：{result['计算明细']['氩气费用']:>15,.2f}¥".rjust(55),
-        f"后处理费：{result['计算明细']['后处理费用']:>15,.2f}¥".rjust(55),
+        f"后处理费：{result['计算明细']['后处理费']:>15,.2f}¥".rjust(55),
         "-"*60,
         f"合计金额：{result['计算明细']['总费用']:>15,.2f}¥".rjust(55),
-        f"折扣优惠：{result['定价标准']['折扣率']:>14}折".rjust(54),
+        f"折扣优惠：{result['定价标准']['折扣优惠']:>14}折".rjust(54),
         f"实付金额：{result['计算明细']['实际费用']:>15,.2f}¥".rjust(55),
         border
     ]
