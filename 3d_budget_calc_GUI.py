@@ -23,13 +23,13 @@ def center_text(text, total_width):
 
 def format_terminal_output(result):
     """增强型终端报表，支持对齐"""
-    border = "=" * 63
+    border = "=" * 62
     parts_info = "\n".join([f"  零件{i+1}: {name}" 
                             for i, name in enumerate(result['输入参数']['零件清单'])])
     
     # 使用宽度感知的居中方法
     title = " 多零件3D打印成本预算报告 "
-    centered_title = center_text(title, 63)
+    centered_title = center_text(title, 61)
     
     output = [
         f"{border}",
@@ -41,16 +41,16 @@ def format_terminal_output(result):
         "\n[零件清单]",
         f"{parts_info}",
         "\n[费用明细]",
-        f"{'  项目名称'.ljust(20)}{'金额'.rjust(35)}",
-        "  " + "-" * 59 + "  ",
-        f"  材料成本：".ljust(20) + f"¥{result['计算明细']['材料费用']:>10,.2f}".rjust(36),
-        f"  机时费用：".ljust(20) + f"¥{result['计算明细']['机时费用']:>10,.2f}".rjust(36),
-        f"  氩气消耗：".ljust(20) + f"¥{result['计算明细']['氩气费用']:>10,.2f}".rjust(36),
-        f"  后处理费：".ljust(20) + f"¥{result['计算明细']['后处理费']:>10,.2f}".rjust(36),
-        "  " + "-" * 59 + "  ",
-        f"  合计金额：".ljust(20) + f"¥{result['计算明细']['总费用']:>10,.2f}".rjust(36),
-        f"  折扣优惠：".ljust(20) + f"{result['定价标准']['折扣优惠']}".rjust(36),
-        f"  实付金额：".ljust(20) + f"¥{result['计算明细']['实际费用']:>10,.2f}".rjust(36),
+        f"{'  项目名称'.ljust(20)}{'金额'.rjust(34)}",
+        "  " + "-" * 58 + "  ",
+        f"  材料成本：".ljust(20) + f"¥{result['计算明细']['材料费用']:>10,.2f}".rjust(35),
+        f"  机时费用：".ljust(20) + f"¥{result['计算明细']['机时费用']:>10,.2f}".rjust(35),
+        f"  氩气消耗：".ljust(20) + f"¥{result['计算明细']['氩气费用']:>10,.2f}".rjust(35),
+        f"  后处理费：".ljust(20) + f"¥{result['计算明细']['后处理费']:>10,.2f}".rjust(35),
+        "  " + "-" * 58 + "  ",
+        f"  合计金额：".ljust(20) + f"¥{result['计算明细']['总费用']:>10,.2f}".rjust(35),
+        f"  折扣优惠：".ljust(20) + f"{result['定价标准']['折扣优惠']}".rjust(35),
+        f"  实付金额：".ljust(20) + f"¥{result['计算明细']['实际费用']:>10,.2f}".rjust(35),
         border
     ]
     return "\n".join(output)
@@ -63,7 +63,7 @@ class CostCalculatorApp(QWidget):
         self.setGeometry(100, 100, 800, 600)
 
         # 设置程序图标
-        self.setWindowIcon(QIcon("icon.png"))  # 替换为你的图标文件路径
+        self.setWindowIcon(QIcon("3dprint.ico"))  # 替换为你的图标文件路径
 
         # 初始化定价标准
         self.pricing_standard = {
@@ -85,7 +85,7 @@ class CostCalculatorApp(QWidget):
     def init_ui(self):
         # 设置窗口大小，确保内容可以完全显示
         self.setWindowTitle("3D Printing Estimator")
-        self.setGeometry(100, 100, 800, 400)  # 调整窗口大小
+        self.setGeometry(100, 100, 800, 500)  # 调整窗口大小
 
         main_layout = QVBoxLayout()  # 主布局，垂直分布
 
@@ -135,18 +135,6 @@ class CostCalculatorApp(QWidget):
         volume_label.setFont(font)  # 确保字体与其他标签一致
         form_layout.addRow(volume_label, volume_layout)
 
-        # 打印时长输入框
-        duration_label = QLabel("打印时长", self)
-        duration_label.setFont(font)
-        self.duration_input = QLineEdit(self)
-        self.duration_input.setText("11天11小时11分11秒")  # 设置默认值
-        self.duration_input.setFont(font)
-        self.duration_input.setStyleSheet(rounded_style)
-
-        # 将打印时长输入框添加到零件信息框的下面
-        duration_layout = QFormLayout()
-        duration_layout.addRow(duration_label, self.duration_input)
-
         # 添加零件按钮
         add_button = QPushButton("添加零件", self)
         add_button.setFont(font)
@@ -171,18 +159,91 @@ class CostCalculatorApp(QWidget):
         # 将 form_layout 添加到左侧布局
         left_layout.addLayout(form_layout)
 
-        # 设置零件信息框
+        # 零件信息框
         self.parts_display = QPlainTextEdit(self)
         self.parts_display.setFont(font)
         self.parts_display.setReadOnly(True)
         self.parts_display.setStyleSheet(rounded_style)
 
         # 调整零件信息框的高度
-        self.parts_display.setFixedHeight(300)  # 设置固定高度为 150，可根据需要调整
+        self.parts_display.setFixedHeight(250)  # 设置固定高度为 250 像素
 
-        # 将零件信息框添加到左侧布局
-        left_layout.addWidget(self.parts_display)  # 零件信息框
-        left_layout.addLayout(duration_layout)  # 打印时长输入框
+        # 将零件信息框添加到左侧布局，紧靠“添加零件”按钮
+        left_layout.addWidget(self.parts_display)
+
+        # 打印时长输入框
+        duration_label = QLabel("打印时长", self)
+        duration_label.setFont(font)
+        self.duration_input = QLineEdit(self)
+        self.duration_input.setText("11天11小时11分11秒")  # 设置默认值
+        self.duration_input.setFont(font)
+        self.duration_input.setStyleSheet(rounded_style)
+
+        # 将打印时长输入框添加到布局
+        duration_layout = QFormLayout()
+        duration_layout.addRow(duration_label, self.duration_input)
+        left_layout.addLayout(duration_layout)
+
+        # 启用导出到 Excel 的复选框
+        self.export_checkbox = QCheckBox("启用导出到 Excel", self)
+        self.export_checkbox.setFont(font)  # 使用加载的 PingFang SC 字体
+        self.export_checkbox.setChecked(False)  # 默认未选中
+        self.export_checkbox.setFixedHeight(self.duration_input.sizeHint().height())  # 设置高度与打印时长输入框一致
+        self.export_checkbox.setStyleSheet("""
+            QCheckBox {
+                spacing: 10px;  /* 文字与复选框的间距 */
+                font-size: 12pt;  /* 字体大小，与右侧一致 */
+                color: #333333;  /* 文字颜色 */
+                vertical-align: middle;  /* 垂直居中 */
+            }
+            QCheckBox::indicator {
+                width: 18px;  /* 复选框宽度 */
+                height: 18px;  /* 复选框高度 */
+            }
+            QCheckBox::indicator:unchecked {
+                border: 2px solid #8f8f91;  /* 未选中时的边框颜色 */
+                background-color: #ffffff;  /* 未选中时的背景颜色 */
+                border-radius: 3px;  /* 圆角 */
+            }
+            QCheckBox::indicator:checked {
+                border: 2px solid #4CAF50;  /* 选中时的边框颜色 */
+                background-color: #4CAF50;  /* 选中时的背景颜色 */
+                border-radius: 3px;  /* 圆角 */
+            }
+            QCheckBox::indicator:unchecked:hover {
+                border: 2px solid #0078D7;  /* 鼠标悬停时未选中状态的边框颜色 */
+            }
+            QCheckBox::indicator:checked:hover {
+                border: 2px solid #45a049;  /* 鼠标悬停时选中状态的边框颜色 */
+                background-color: #45a049;  /* 鼠标悬停时选中状态的背景颜色 */
+            }
+        """)
+        
+        # 将复选框添加到布局中，与右侧的折扣优惠上下对齐
+        duration_layout.addRow(self.export_checkbox)
+
+        # 一键清零按钮
+        clear_button = QPushButton("一键清零", self)
+        clear_button.setFont(font)
+        clear_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FF5722;  /* 橙色背景 */
+                color: white;  /* 白色文字 */
+                border: none;
+                border-radius: 5px;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background-color: #E64A19;  /* 鼠标悬停时的颜色 */
+            }
+            QPushButton:pressed {
+                background-color: #D84315;  /* 按下时的颜色 */
+            }
+        """)
+        clear_button.clicked.connect(self.clear_parts_display)  # 连接到修改后的方法
+
+        # 将一键清零按钮添加到左侧布局的最下面
+        left_layout.addWidget(clear_button)
 
         content_layout.addLayout(left_layout)
 
@@ -229,20 +290,6 @@ class CostCalculatorApp(QWidget):
 
         right_layout.addLayout(param_layout)
 
-        content_layout.addLayout(right_layout)
-
-        # 添加内容布局到主布局
-        main_layout.addLayout(content_layout)
-
-        # 底部按钮布局
-        button_layout = QHBoxLayout()
-
-        # 添加导出到 Excel 的开关
-        self.export_checkbox = QCheckBox("启用导出到 Excel", self)
-        self.export_checkbox.setFont(font)
-        self.export_checkbox.setChecked(True)  # 默认启用
-        button_layout.addWidget(self.export_checkbox)
-
         # 计算成本按钮
         calc_button = QPushButton("计算成本", self)
         calc_button.setFont(font)
@@ -263,9 +310,12 @@ class CostCalculatorApp(QWidget):
         """)
         calc_button.clicked.connect(self.calculate_cost)
 
-        button_layout.addWidget(calc_button)
+        right_layout.addWidget(calc_button)
 
-        main_layout.addLayout(button_layout)
+        content_layout.addLayout(right_layout)
+
+        # 添加内容布局到主布局
+        main_layout.addLayout(content_layout)
 
         # 设置结果显示框容器
         result_container = QWidget(self)  # 创建一个容器
@@ -287,24 +337,32 @@ class CostCalculatorApp(QWidget):
         self.result_output.setStyleSheet(rounded_style)
         self.result_output.setLineWrapMode(QPlainTextEdit.NoWrap)  # 禁用自动换行
 
-        # 动态调整高度函数
-        def adjust_output_height():
-            document = self.result_output.document()
-            line_count = document.blockCount()  # 获取内容的行数
-            line_height = QFontMetrics(self.result_output.font()).height()  # 获取每行的高度
-            padding = 35  # 添加一些额外的间距
-            new_height = line_count * line_height + padding
-            max_height = 1000  # 设置最大高度，避免过高
+        # 设置最小高度
+        self.result_output.setMinimumHeight(300)  # 设置最小高度为 200 像素
 
-            # 仅在高度发生变化时更新
-            current_height = self.result_output.height()
-            target_height = min(new_height, max_height)
-            if current_height != target_height:
-                self.result_output.setFixedHeight(target_height)
-                result_container.update()  # 确保容器边框正确渲染
-
-        # 在内容变化时动态调整高度
-        self.result_output.textChanged.connect(adjust_output_height)
+        # 启用滚动条并设置滚动条样式
+        self.result_output.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)  # 启用垂直滚动条
+        self.result_output.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)  # 启用水平滚动条
+        self.result_output.verticalScrollBar().setStyleSheet("""
+            QScrollBar:vertical {
+                border: none;
+                background: #f0f0f0;
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #c0c0c0;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #a0a0a0;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                background: none;
+                height: 0px;
+            }
+        """)
 
         # 将结果显示框添加到容器布局
         result_layout.addWidget(self.result_output)
@@ -344,6 +402,22 @@ class CostCalculatorApp(QWidget):
         self.parts_display.appendPlainText(f"{name} - {volume:.2f}mm³")
         self.name_input.clear()
         self.volume_input.clear()
+
+    def clear_inputs(self):
+        """清空所有输入框的内容"""
+        self.name_input.clear()
+        self.volume_input.clear()
+        self.duration_input.clear()
+        for input_field in self.param_inputs.values():
+            input_field.clear()
+        self.result_output.clear()
+        self.parts_display.clear()
+
+    def clear_parts_display(self):
+        """清空零件信息框和输出信息框的内容"""
+        self.parts_display.clear()  # 清空零件信息框
+        self.result_output.clear()  # 清空输出信息框
+        self.parts = []  # 清空零件信息列表
 
     def calculate_cost(self):
         # 获取用户输入的参数值
