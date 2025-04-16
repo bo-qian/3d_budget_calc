@@ -4,7 +4,7 @@ import unicodedata
 import re
 import pandas as pd
 from datetime import datetime
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QPlainTextEdit, QFormLayout, QFileDialog, QCheckBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QPlainTextEdit, QFormLayout, QFileDialog, QCheckBox, QMessageBox
 from PyQt5.QtGui import QFont, QFontDatabase, QFontMetrics, QIcon
 from PyQt5.QtCore import Qt
 from openpyxl import load_workbook  # 添加用于读取 Excel 文件的库
@@ -27,7 +27,7 @@ def center_text(text, total_width):
 
 def format_terminal_output(result):
     """增强型终端报表，支持对齐"""
-    border = "=" * 62
+    border = "=" * 61
 
     # 确保零件清单中的每个元素是字典
     parts_info = "\n".join([
@@ -38,7 +38,7 @@ def format_terminal_output(result):
 
     # 使用宽度感知的居中方法
     title = " 多零件3D打印成本预算报告 "
-    centered_title = center_text(title, 61)
+    centered_title = center_text(title, 60)
 
     output = [
         f"{border}",
@@ -50,16 +50,16 @@ def format_terminal_output(result):
         "\n[零件清单]",
         f"{parts_info}",
         "\n[费用明细]",
-        f"{'  项目名称'.ljust(20)}{'金额'.rjust(34)}",
-        "  " + "-" * 58 + "  ",
-        f"  材料成本：".ljust(20) + f"¥{result['计算明细']['材料费用']:>10,.2f}".rjust(35),
-        f"  机时费用：".ljust(20) + f"¥{result['计算明细']['机时费用']:>10,.2f}".rjust(35),
-        f"  氩气消耗：".ljust(20) + f"¥{result['计算明细']['氩气费用']:>10,.2f}".rjust(35),
-        f"  后处理费：".ljust(20) + f"¥{result['计算明细']['后处理费']:>10,.2f}".rjust(35),
-        "  " + "-" * 58 + "  ",
-        f"  合计金额：".ljust(20) + f"¥{result['计算明细']['总费用']:>10,.2f}".rjust(35),
-        f"  折扣优惠：".ljust(20) + f"{result['定价标准']['折扣优惠']}".rjust(35),
-        f"  实付金额：".ljust(20) + f"¥{result['计算明细']['实际费用']:>10,.2f}".rjust(35),
+        f"{'  项目名称'.ljust(20)}{'金额'.rjust(33)}",
+        "  " + "-" * 57 + "  ",
+        f"  材料成本：".ljust(20) + f"¥{result['计算明细']['材料费用']:>10,.2f}".rjust(34),
+        f"  机时费用：".ljust(20) + f"¥{result['计算明细']['机时费用']:>10,.2f}".rjust(34),
+        f"  氩气消耗：".ljust(20) + f"¥{result['计算明细']['氩气费用']:>10,.2f}".rjust(34),
+        f"  后处理费：".ljust(20) + f"¥{result['计算明细']['后处理费']:>10,.2f}".rjust(34),
+        "  " + "-" * 57 + "  ",
+        f"  合计金额：".ljust(20) + f"¥{result['计算明细']['总费用']:>10,.2f}".rjust(34),
+        f"  折扣优惠：".ljust(20) + f"{result['定价标准']['折扣优惠']}".rjust(34),
+        f"  实付金额：".ljust(20) + f"¥{result['计算明细']['实际费用']:>10,.2f}".rjust(34),
         border
     ]
     return "\n".join(output)
@@ -138,112 +138,115 @@ def convert_duration_to_hours(duration_str):
 
 def export_to_excel(result, filename="多零件预算报告.xlsx"):
     """专业级多零件报表"""
-    with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        workbook = writer.book
-        worksheet = workbook.add_worksheet('预算总览')
-        
-        # 高级格式配置
-        header_format = workbook.add_format({
-            'bold': True, 'bg_color': '#4F81BD', 'font_color': '#FFFFFF', 'border': 1,
-            'align': 'center', 'valign': 'vcenter'
-        })
-        part_name_format = workbook.add_format({
-            'bold': True, 'bg_color': '#D9E1F2', 'border': 1,
-            'align': 'center', 'valign': 'vcenter'
-        })
-        part_detail_format = workbook.add_format({
-            'bg_color': '#FCE4D6', 'border': 1,
-            'align': 'center', 'valign': 'vcenter'
-        })
-        currency_format = workbook.add_format({
-            'num_format': '¥##0.00', 'bg_color': '#E2EFDA', 'border': 1,
-            'align': 'center', 'valign': 'vcenter'
-        })
-        number_format = workbook.add_format({
-            'num_format': '0.00', 'bg_color': '#FFF2CC', 'border': 1,
-            'align': 'center', 'valign': 'vcenter'
-        })
-        normal_format = workbook.add_format({
-            'bg_color': '#FFFFFF', 'border': 1,
-            'align': 'center', 'valign': 'vcenter'
-        })
-        
-        # 标题区块
-        worksheet.merge_range('A1:B1', '多零件合并打印预算报告',
-                              workbook.add_format({
-                                  'bold': True, 'font_size': 14, 'bg_color': '#4F81BD', 'font_color': '#FFFFFF',
-                                  'align': 'center', 'border': 1
-                              }))
-        worksheet.merge_range('A2:B2', f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                              normal_format)
-        
-        # 输入参数动态生成
-        params = [
-            ['总打印时长', result['输入参数']['总打印时长']],
-            ['零件数量', f"{result['输入参数']['零件数量']}件"]
-        ]
-        
-        # 修改零件体积提取逻辑，直接从字典中获取数据
-        for i, part in enumerate(result['输入参数']['零件清单'], 1):
-            params.extend([
-                [f'零件{i}名称', part['name']],
-                [f'零件{i}体积', f"{part['volume']:.3f}mm³"],
-                [f'零件{i}支撑体积', f"{part['support_volume']:.3f}mm³"]
-            ])
-        
-        # 定义定价标准的单位
-        pricing_units = {
-            "钛粉密度": "g/cm³",
-            "致密系数": "",  # 无单位
-            "用量比例": "",  # 无单位
-            "材料单价": "元/公斤",
-            "机时费率": "元/小时",
-            "氩气数量": "瓶",
-            "氩气单价": "元",
-            "氩气用量": "瓶",  # 无单位
-            "后处理费": "元",
-            "折扣优惠": ""  # 无单位
-        }
-        
-        # 为定价标准添加单位
-        pricing_standard_with_units = [
-            [param, f"{value} {pricing_units.get(param, '')}".strip()]
-            for param, value in result['定价标准'].items()
-        ]
-        
-        # 数据写入逻辑
-        def write_section(data, start_row, title):
-            worksheet.merge_range(start_row, 0, start_row, 1, title, header_format)
-            for row_idx, (label, value) in enumerate(data, start_row + 1):
-                if "零件" in label and "名称" in label:  # 零件名称行加背景颜色
-                    cell_format = part_name_format
-                elif "体积" in label:  # 零件体积和支撑体积行加背景颜色
-                    cell_format = part_detail_format
-                elif title == "费用明细":
-                    if "费用" in label or "金额" in label or "后处理费" in label:  # 判断是否为货币
-                        cell_format = currency_format
+    try:
+        with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
+            workbook = writer.book
+            worksheet = workbook.add_worksheet('预算总览')
+            
+            # 高级格式配置
+            header_format = workbook.add_format({
+                'bold': True, 'bg_color': '#4F81BD', 'font_color': '#FFFFFF', 'border': 1,
+                'align': 'center', 'valign': 'vcenter'
+            })
+            part_name_format = workbook.add_format({
+                'bold': True, 'bg_color': '#D9E1F2', 'border': 1,
+                'align': 'center', 'valign': 'vcenter'
+            })
+            part_detail_format = workbook.add_format({
+                'bg_color': '#FCE4D6', 'border': 1,
+                'align': 'center', 'valign': 'vcenter'
+            })
+            currency_format = workbook.add_format({
+                'num_format': '¥##0.00', 'bg_color': '#E2EFDA', 'border': 1,
+                'align': 'center', 'valign': 'vcenter'
+            })
+            number_format = workbook.add_format({
+                'num_format': '0.00', 'bg_color': '#FFF2CC', 'border': 1,
+                'align': 'center', 'valign': 'vcenter'
+            })
+            normal_format = workbook.add_format({
+                'bg_color': '#FFFFFF', 'border': 1,
+                'align': 'center', 'valign': 'vcenter'
+            })
+            
+            # 标题区块
+            worksheet.merge_range('A1:B1', '多零件合并打印预算报告',
+                                  workbook.add_format({
+                                      'bold': True, 'font_size': 14, 'bg_color': '#4F81BD', 'font_color': '#FFFFFF',
+                                      'align': 'center', 'border': 1
+                                  }))
+            worksheet.merge_range('A2:B2', f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                                  normal_format)
+            
+            # 输入参数动态生成
+            params = [
+                ['总打印时长', result['输入参数']['总打印时长']],
+                ['零件数量', f"{result['输入参数']['零件数量']}件"]
+            ]
+            
+            # 修改零件体积提取逻辑，直接从字典中获取数据
+            for i, part in enumerate(result['输入参数']['零件清单'], 1):
+                params.extend([
+                    [f'零件{i}名称', part['name']],
+                    [f'零件{i}体积', f"{part['volume']:.3f}mm³"],
+                    [f'零件{i}支撑体积', f"{part['support_volume']:.3f}mm³"]
+                ])
+            
+            # 定义定价标准的单位
+            pricing_units = {
+                "钛粉密度": "g/cm³",
+                "致密系数": "",  # 无单位
+                "用量比例": "",  # 无单位
+                "材料单价": "元/公斤",
+                "机时费率": "元/小时",
+                "氩气数量": "瓶",
+                "氩气单价": "元",
+                "氩气用量": "瓶",  # 无单位
+                "后处理费": "元",
+                "折扣优惠": ""  # 无单位
+            }
+            
+            # 为定价标准添加单位
+            pricing_standard_with_units = [
+                [param, f"{value} {pricing_units.get(param, '')}".strip()]
+                for param, value in result['定价标准'].items()
+            ]
+            
+            # 数据写入逻辑
+            def write_section(data, start_row, title):
+                worksheet.merge_range(start_row, 0, start_row, 1, title, header_format)
+                for row_idx, (label, value) in enumerate(data, start_row + 1):
+                    if "零件" in label and "名称" in label:  # 零件名称行加背景颜色
+                        cell_format = part_name_format
+                    elif "体积" in label:  # 零件体积和支撑体积行加背景颜色
+                        cell_format = part_detail_format
+                    elif title == "费用明细":
+                        if "费用" in label or "金额" in label or "后处理费" in label:  # 判断是否为货币
+                            cell_format = currency_format
+                        else:
+                            cell_format = normal_format
                     else:
-                        cell_format = normal_format
-                else:
-                    cell_format = number_format if isinstance(value, (int, float)) else normal_format
-                
-                worksheet.write(row_idx, 0, label, cell_format)
-                worksheet.write(row_idx, 1, value, cell_format)
-            return start_row + len(data) + 2
-        
-        current_row = 3
-        current_row = write_section(params, current_row, "输入参数")
-        current_row = write_section(pricing_standard_with_units, current_row, "定价标准")
-        current_row = write_section(
-            [[k, v] for k, v in result['计算明细'].items()],
-            current_row, "费用明细"
-        )
-        
-        # 智能列宽设置
-        worksheet.set_column('A:A', 25)
-        worksheet.set_column('B:B', 25)
-        
-        print(f"\n专业级报表已生成：{filename}")
+                        cell_format = number_format if isinstance(value, (int, float)) else normal_format
+                    
+                    worksheet.write(row_idx, 0, label, cell_format)
+                    worksheet.write(row_idx, 1, value, cell_format)
+                return start_row + len(data) + 2
+            
+            current_row = 3
+            current_row = write_section(params, current_row, "输入参数")
+            current_row = write_section(pricing_standard_with_units, current_row, "定价标准")
+            current_row = write_section(
+                [[k, v] for k, v in result['计算明细'].items()],
+                current_row, "费用明细"
+            )
+            
+            # 智能列宽设置
+            worksheet.set_column('A:A', 25)
+            worksheet.set_column('B:B', 25)
+            
+            print(f"\n专业级报表已生成：{filename}")
+    except PermissionError:
+        QMessageBox.warning(None, "文件打开错误", f"文件 {filename} 正在被占用，请关闭后重试！")
 
 class CostCalculatorApp(QWidget):
     def __init__(self):
@@ -314,7 +317,7 @@ class CostCalculatorApp(QWidget):
                 background-color: #4CAF50;  /* 绿色背景 */
                 color: white;  /* 白色文字 */
                 border: none;
-                border-radius: 5px;
+                border-radius: 6px;
                 padding: 8px 16px;
             }
             QPushButton:hover {
@@ -414,12 +417,12 @@ class CostCalculatorApp(QWidget):
             QCheckBox::indicator:unchecked {
                 border: 2px solid #8f8f91;  /* 未选中时的边框颜色 */
                 background-color: #ffffff;  /* 未选中时的背景颜色 */
-                border-radius: 3px;  /* 圆角 */
+                border-radius: 6px;  /* 圆角 */
             }
             QCheckBox::indicator:checked {
                 border: 2px solid #4CAF50;  /* 选中时的边框颜色 */
                 background-color: #4CAF50;  /* 选中时的背景颜色 */
-                border-radius: 3px;  /* 圆角 */
+                border-radius: 6px;  /* 圆角 */
             }
             QCheckBox::indicator:unchecked:hover {
                 border: 2px solid #0078D7;  /* 鼠标悬停时未选中状态的边框颜色 */
@@ -441,7 +444,7 @@ class CostCalculatorApp(QWidget):
                 background-color: #FF5722;  /* 橙色背景 */
                 color: white;  /* 白色文字 */
                 border: none;
-                border-radius: 5px;
+                border-radius: 6px;
                 padding: 8px 16px;
             }
             QPushButton:hover {
@@ -509,7 +512,7 @@ class CostCalculatorApp(QWidget):
                 background-color: #0078D7;  /* 蓝色背景 */
                 color: white;  /* 白色文字 */
                 border: none;
-                border-radius: 5px;
+                border-radius: 6px;
                 padding: 8px 16px;
             }
             QPushButton:hover {
@@ -535,10 +538,14 @@ class CostCalculatorApp(QWidget):
 
         # 设置容器的圆角样式
         result_container.setStyleSheet("""
-            QWidget {
+            QLineEdit, QPushButton, QPlainTextEdit {
                 border: 2px solid #8f8f91;
-                border-radius: 10px;  /* 设置圆角半径 */
+                border-radius: 10px;
+                padding: 5px;
                 background-color: #ffffff;  /* 设置背景颜色为白色 */
+            }
+            QLineEdit:focus, QPushButton:pressed, QPlainTextEdit:focus {
+                border: 2px solid #0078d7;
             }
         """)
 
