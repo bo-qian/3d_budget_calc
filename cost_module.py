@@ -23,7 +23,7 @@ def calculate_multipart_cost(parts, total_print_duration, pricing_standard):
 
     return {
         "输入参数": {
-            "零件清单": [f"{p['name']} ({p['volume']:.2f}mm³)" for p in parts],
+            "零件清单": [f"{p['name']} ({p['volume']:.3f}mm³)" for p in parts],
             "总打印时长": total_print_duration,
             "零件数量": len(parts)
         },
@@ -121,53 +121,80 @@ def export_to_excel(result, filename="多零件预算报告.xlsx"):
         
         # 高级格式配置
         header_format = workbook.add_format({
-            'bold':True, 'bg_color':'#D9E1F2', 'border':1, 
-            'align':'center', 'valign':'vcenter'
+            'bold': True, 'bg_color': '#D9E1F2', 'border': 1,
+            'align': 'center', 'valign': 'vcenter'
         })
         currency_format = workbook.add_format({
-            'num_format': '¥##0.00', 'border':1,
-            'align':'center', 'valign':'vcenter'
+            'num_format': '¥##0.00', 'border': 1,
+            'align': 'center', 'valign': 'vcenter'
         })
         number_format = workbook.add_format({
-            'num_format': '0.00', 'border':1,
-            'align':'center', 'valign':'vcenter'
+            'num_format': '0.00', 'border': 1,
+            'align': 'center', 'valign': 'vcenter'
         })
         normal_format = workbook.add_format({
-            'align':'center', 'valign':'vcenter',
-            'border':1
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1
         })
         
         # 标题区块
-        worksheet.merge_range('A1:B1', '多零件合并打印预算报告', 
-                            workbook.add_format({
-                                'bold':True, 'font_size':14,
-                                'align':'center', 'border':1
-                            }))
-        worksheet.merge_range('A2:B2', f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}", 
-                       normal_format)
+        worksheet.merge_range('A1:B1', '多零件合并打印预算报告',
+                              workbook.add_format({
+                                  'bold': True, 'font_size': 14,
+                                  'align': 'center', 'border': 1
+                              }))
+        worksheet.merge_range('A2:B2', f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                              normal_format)
         
         # 输入参数动态生成
         params = [
             ['总打印时长', result['输入参数']['总打印时长']],
             ['零件数量', f"{result['输入参数']['零件数量']}件"]
         ]
+        
+        # 修改零件体积提取逻辑
         for i, part in enumerate(result['输入参数']['零件清单'], 1):
-            params.extend([
-                [f'零件{i}名称', part.split('(')[0].strip()],
-                [f'零件{i}体积', f"{eval(part.split("(")[1].split('mm')[0]):,.2f}mm³"]
-            ])
+            match = re.search(r'\(([\d.]+)mm³\)', part)
+            if match:
+                volume = float(match.group(1))  # 提取括号中的体积值
+                params.extend([
+                    [f'零件{i}名称', part.split('(')[0].strip()],
+                    [f'零件{i}体积', f"{volume:,.3f}mm³"]
+                ])
+            else:
+                raise ValueError(f"无法解析零件体积：{part}")
+        
+        # 定义定价标准的单位
+        pricing_units = {
+            "钛粉密度": "g/cm³",
+            "致密系数": "",  # 无单位
+            "用量比例": "",  # 无单位
+            "材料单价": "元/公斤",
+            "机时费率": "元/小时",
+            "氩气数量": "瓶",
+            "氩气单价": "元",
+            "氩气用量": "瓶",  # 无单位
+            "后处理费": "元",
+            "折扣优惠": ""  # 无单位
+        }
+        
+        # 为定价标准添加单位
+        pricing_standard_with_units = [
+            [param, f"{value} {pricing_units.get(param, '')}".strip()]
+            for param, value in result['定价标准'].items()
+        ]
         
         # 数据写入逻辑
         def write_section(data, start_row, title):
-            worksheet.merge_range(start_row,0, start_row,1, title, header_format)
-            for row_idx, (label, value) in enumerate(data, start_row+1):
+            worksheet.merge_range(start_row, 0, start_row, 1, title, header_format)
+            for row_idx, (label, value) in enumerate(data, start_row + 1):
                 if title == "费用明细":
-                    if "费用" in label or "金额" in label:  # 网页4建议的关键词判断
+                    if "费用" in label or "金额" in label or "后处理费" in label:  # 判断是否为货币
                         cell_format = currency_format
                     else:
                         cell_format = normal_format
                 else:
-                    cell_format = number_format if isinstance(value, (int,float)) else normal_format
+                    cell_format = number_format if isinstance(value, (int, float)) else normal_format
                 
                 worksheet.write(row_idx, 0, label, normal_format)
                 worksheet.write(row_idx, 1, value, cell_format)
@@ -175,16 +202,13 @@ def export_to_excel(result, filename="多零件预算报告.xlsx"):
         
         current_row = 3
         current_row = write_section(params, current_row, "输入参数")
+        current_row = write_section(pricing_standard_with_units, current_row, "定价标准")
         current_row = write_section(
-            [[k,v] for k,v in result['定价标准'].items()], 
-            current_row, "定价标准"
-        )
-        current_row = write_section(
-            [[k,v] for k,v in result['计算明细'].items()], 
+            [[k, v] for k, v in result['计算明细'].items()],
             current_row, "费用明细"
         )
         
-        # 智能列宽设置[6](@ref)
+        # 智能列宽设置
         worksheet.set_column('A:A', 25)
         worksheet.set_column('B:B', 25)
         
